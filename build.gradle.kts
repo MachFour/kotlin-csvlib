@@ -1,11 +1,11 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.5.10"
+    kotlin("jvm") version "1.6.20"
     application
 }
 
-group = "de.beanfactory"
+group = "com.machfour"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -13,6 +13,8 @@ repositories {
 }
 
 dependencies {
+    implementation(kotlin("stdlib:1.6.20"))
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.20") // for Path.readBytes()
     testImplementation(kotlin("test"))
 }
 
@@ -21,7 +23,7 @@ tasks.test {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11.toString()
 }
 
 application {
