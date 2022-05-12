@@ -42,15 +42,13 @@ import de.beanfactory.csvparser.CsvParser.ParserState.*
 
 private const val NEWLINE_CHAR = '\n'
 private const val QUOTE_CHAR = '"'
+private const val ESCAPE_CHAR = '\\'
 
 typealias CsvRow = ArrayList<String>
 
 class CsvParser(
-    private val fieldSeparator: FieldSeparator
+    private val separator: FieldSeparator
 ) {
-
-    //private val fieldNames = ArrayList<String>()
-    //private var currentField: Int = 0
 
     /**
      * parse the given string as csv.
@@ -65,9 +63,7 @@ class CsvParser(
 
         while (pos < csvString.length) {
             when (state) {
-                START -> {
-                    state = START_OF_ROW
-                }
+                START -> state = START_OF_ROW
                 START_OF_ROW -> {
                     when (csvString[pos]) {
                         NEWLINE_CHAR -> pos++ // skip empty lines
@@ -75,10 +71,9 @@ class CsvParser(
                     }
                 }
                 READ_FIELD_VALUE -> {
-                    //val fieldName = nextFieldName()
-                    val result = readFieldValue(csvString.substring(pos))
+                    val result = readFieldValue(csvString, pos)
 
-                    pos += result.newPos
+                    pos = result.newPos
                     currentRow.add(result.value)
                     state = NEXT_FIELD
                 }
@@ -86,12 +81,11 @@ class CsvParser(
                     pos++
                     rows += currentRow
                     currentRow = CsvRow()
-                    //currentField = 0
                     state = START_OF_ROW
                 }
                 NEXT_FIELD -> {
                     state = when (csvString[pos]) {
-                        fieldSeparator.char -> {
+                        separator.char -> {
                             pos++
                             READ_FIELD_VALUE // start new field value
                         }
@@ -118,8 +112,8 @@ class CsvParser(
         return rows
     }
 
-    private fun readFieldValue(inputData: String): ParseResult<String> {
-        var pos = 0
+    private fun readFieldValue(inputData: String, startPos: Int): ParseResult<String> {
+        var pos = startPos
         var value = ""
         var state: ParserState = START
 
@@ -135,9 +129,9 @@ class CsvParser(
                     }
                 }
                 READ_UNQUOTED_CHARS -> {
-                    val result = readFieldChar("${fieldSeparator.char}$NEWLINE_CHAR", inputData.substring(pos), false)
-                    state = result.state ?: state
-                    pos += result.newPos
+                    val result = readFieldChar(inputData, pos, "${separator.char}$NEWLINE_CHAR", false)
+                    state = result.newState ?: state
+                    pos = result.newPos
                     value += result.value
                     // Field terminates at end of data
                     if (pos >= inputData.length) {
@@ -145,18 +139,16 @@ class CsvParser(
                     }
                 }
                 READ_QUOTED_CHARS -> {
-                    val result = readFieldChar("$QUOTE_CHAR", inputData.substring(pos), true)
-                    state = result.state ?: state
-                    pos += result.newPos
+                    val result = readFieldChar(inputData, pos, "$QUOTE_CHAR", true)
+                    state = result.newState ?: state
+                    pos = result.newPos
                     value += result.value
                     // Field cannot be terminated by end of data
                     if (pos >= inputData.length && state != END_OF_FIELD) {
                         state = ERROR_UNTERMINATED_QUOTED_FIELD
                     }
                 }
-                END_OF_FIELD -> {
-                    return ParseResult(pos, value)
-                }
+                END_OF_FIELD -> return ParseResult(value, null, pos)
                 ERROR_INCOMPLETE_ESCAPE -> {
                     throw CsvParserException("Unexpected end of data during escape character processing\n" +
                         ">>> ${inputData.substring(0, minOf(pos + 1, inputData.length))} <<< here"
@@ -174,68 +166,81 @@ class CsvParser(
         }
 
         // end of field at end of file
-        return ParseResult(pos, value)
+        return ParseResult(value, null, pos)
     }
 
-    //private fun nextFieldName(): String {
-    //    currentField++
-    //    return if (fieldNames.size > currentField) {
-    //        fieldNames[currentField]
-    //    } else {
-    //        currentField.toString()
-    //    }
-    //}
 
-    private fun readFieldChar(terminator: String, inputData: String, readBehindTerminator: Boolean): ParseResult<String> {
-        val result = readNextChar(inputData)
+    private fun readFieldChar(
+        inputData: String,
+        startPos: Int,
+        terminator: String,
+        readBehindTerminator: Boolean
+    ): ParseResult<String> {
+        val result = readNextChar(inputData, startPos)
 
         val resultPos: Int
         val resultValue: String
         val resultState: ParserState?
 
-        if (terminator.contains(result.value) && result.state != ESCAPED_CHARACTER) {
+        if (terminator.contains(result.value) && result.newState != ESCAPED_CHARACTER) {
             resultPos = if (readBehindTerminator) result.newPos else result.newPos - 1
             resultValue = ""
             resultState = END_OF_FIELD
         } else {
             resultPos = result.newPos
             resultValue = result.value.toString()
-            resultState = result.state?.takeIf { it.isError }
+            resultState = result.newState?.takeIf { it.isError }
         }
 
-        return ParseResult(resultPos, resultValue, resultState)
+        return ParseResult(resultValue, resultState, resultPos)
     }
 
-    private fun readNextChar(inputData: String, pos: Int = 0): ParseResult<Char> {
-        val state: ParserState?
-        val value: Char
-        val endPos: Int
+    private fun readNextChar(inputData: String, pos: Int): ParseResult<Char> {
+        val isLastChar = inputData.length <= pos + 1
 
-        if (inputData[pos] == '\\') {   // read escaped
-            if (inputData.length <= 1) { // catch escape without data
-                state = ERROR_INCOMPLETE_ESCAPE
-                value = inputData[pos]
-                endPos = pos
-            } else {
-                state = ESCAPED_CHARACTER
-                value = inputData[1]
-                endPos = pos + 2
+        // for when there's no special character
+        val ordinaryParse = ParseResult(
+            value = inputData[pos],
+            newState = null,
+            newPos = pos + 1
+        )
+
+        return when (inputData[pos]) {
+            ESCAPE_CHAR -> { // read escaped char
+                if (isLastChar) {
+                    // catch escape without data
+                    ParseResult(
+                        value = inputData[pos],
+                        newState = ERROR_INCOMPLETE_ESCAPE,
+                        newPos = pos
+                    )
+                } else {
+                    ParseResult(
+                        value = inputData[pos + 1],
+                        newState = ESCAPED_CHARACTER,
+                        newPos = pos + 2
+                    )
+                }
             }
-        } else if (inputData[pos] == QUOTE_CHAR && inputData.length > 1 && inputData[pos+1] == QUOTE_CHAR) {
-            // this is a double quote, reduce to one quote with escape
-            state = ESCAPED_CHARACTER
-            value = QUOTE_CHAR
-            endPos = pos + 2
-        } else {
-            state = null
-            value = inputData[pos]
-            endPos = pos + 1
+            QUOTE_CHAR -> {
+                if (!isLastChar && inputData[pos + 1] == QUOTE_CHAR) {
+                    // this is a double quote, reduce to one quote with escape
+                    ParseResult(
+                        value = QUOTE_CHAR,
+                        newState = ESCAPED_CHARACTER,
+                        newPos = pos + 2
+                    )
+                } else {
+                    ordinaryParse
+                }
+            }
+            // if we haven't returned yet, then it's just a normal character
+            else -> ordinaryParse
         }
 
-        return ParseResult(endPos, value, state)
     }
 
-    private data class ParseResult<T>(val newPos: Int, val value: T, val state: ParserState? = null)
+    private data class ParseResult<T>(val value: T, val newState: ParserState?, val newPos: Int)
 
     private enum class ParserState {
         START,
@@ -253,6 +258,7 @@ class CsvParser(
         ;
 
         val isError: Boolean = name.startsWith("ERROR")
+
     }
 
 }
