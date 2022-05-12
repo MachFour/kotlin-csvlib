@@ -3,20 +3,6 @@ package de.beanfactory.csvparser
 import de.beanfactory.csvparser.CsvParser.ParserState.*
 
 /**
- * contains a field, read from the csv rows
- */
-data class Field(val name: String, val value: String)
-
-/**
- * contains a data row of fields
- */
-data class Row(var fields: List<Field> = ArrayList()) {
-    fun add(field: Field) {
-        fields += field
-    }
-}
-
-/**
  * CsvParser implementation.
  *
  * <p>
@@ -57,20 +43,22 @@ data class Row(var fields: List<Field> = ArrayList()) {
 private const val NEWLINE_CHAR = '\n'
 private const val QUOTE_CHAR = '"'
 
+typealias CsvRow = ArrayList<String>
+
 class CsvParser(
     private val fieldSeparator: FieldSeparator
 ) {
 
-    private val fieldNames = ArrayList<String>()
-    private var currentField: Int = 0
+    //private val fieldNames = ArrayList<String>()
+    //private var currentField: Int = 0
 
     /**
      * parse the given string as csv.
      *
      */
-    fun parse(csvString: String): List<Row> {
-        val rows = ArrayList<Row>()
-        var currentRow = Row()
+    fun parse(csvString: String): List<CsvRow> {
+        val rows = ArrayList<CsvRow>()
+        var currentRow = CsvRow()
 
         var pos = 0
         var state: ParserState = START
@@ -87,8 +75,8 @@ class CsvParser(
                     }
                 }
                 READ_FIELD_VALUE -> {
-                    val fieldName = nextFieldName()
-                    val result = readField(fieldName, csvString.substring(pos))
+                    //val fieldName = nextFieldName()
+                    val result = readFieldValue(csvString.substring(pos))
 
                     pos += result.newPos
                     currentRow.add(result.value)
@@ -97,8 +85,8 @@ class CsvParser(
                 END_OF_ROW -> { // end of Row reached, process and start
                     pos++
                     rows += currentRow
-                    currentRow = Row()
-                    currentField = 0
+                    currentRow = CsvRow()
+                    //currentField = 0
                     state = START_OF_ROW
                 }
                 NEXT_FIELD -> {
@@ -123,14 +111,14 @@ class CsvParser(
         }
         csvString.chars()
 
-        if (currentRow.fields.isNotEmpty()) {
+        if (currentRow.isNotEmpty()) {
             rows += currentRow
         }
 
         return rows
     }
 
-    private fun readField(name: String, inputData: String): ParseResult<Field> {
+    private fun readFieldValue(inputData: String): ParseResult<String> {
         var pos = 0
         var value = ""
         var state: ParserState = START
@@ -167,7 +155,7 @@ class CsvParser(
                     }
                 }
                 END_OF_FIELD -> {
-                    return ParseResult(pos, Field(name, value))
+                    return ParseResult(pos, value)
                 }
                 ERROR_INCOMPLETE_ESCAPE -> {
                     throw CsvParserException("Unexpected end of data during escape character processing\n" +
@@ -186,17 +174,17 @@ class CsvParser(
         }
 
         // end of field at end of file
-        return ParseResult(pos, Field(name, value))
+        return ParseResult(pos, value)
     }
 
-    private fun nextFieldName(): String {
-        currentField++
-        return if (fieldNames.size > currentField) {
-            fieldNames[currentField]
-        } else {
-            currentField.toString()
-        }
-    }
+    //private fun nextFieldName(): String {
+    //    currentField++
+    //    return if (fieldNames.size > currentField) {
+    //        fieldNames[currentField]
+    //    } else {
+    //        currentField.toString()
+    //    }
+    //}
 
     private fun readFieldChar(terminator: String, inputData: String, readBehindTerminator: Boolean): ParseResult<String> {
         val result = readNextChar(inputData)
