@@ -97,6 +97,7 @@ internal val csvTest7 = """
         GIT\"
         Jira""
         Large/ small screen devices";2015""".trimIndent()
+
 internal val csvTest8 = """
         Telekommunikation;Scrum\
         intelliJ\
@@ -104,3 +105,14 @@ internal val csvTest8 = """
         GIT\" ""\
         Jira\
         Large/ small screen devices\;;2015""".trimIndent()
+
+internal val csvTest9 = """
+    1
+    2
+    3
+    4
+    5
+    6
+    7""".trimIndent()
+
+internal val csvTest10 = "1\r\n\"2\r\n3\""

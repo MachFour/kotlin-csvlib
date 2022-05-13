@@ -1,80 +1,125 @@
 package de.beanfactory.csvparser
 
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFails
 
 internal class CsvParserTest {
 
 
-    private fun testParseCSVHelper(useComma: Boolean) {
-        val parser = CsvParser(if (useComma) FieldSeparator.COMMA else FieldSeparator.SEMICOLON)
+    private fun testParseCSVHelper(useComma: Boolean, testCRLF: Boolean) {
+        fun String.withDesiredLineEnding(): String {
+            return if (testCRLF) replace("\n", "\r\n") else this
+        }
 
-        val result = parser.parse(if (useComma) csvTest1Comma else csvTest1)
+        val config: CsvConfig
+        val testCsv: String
 
-        Assertions.assertEquals(11, result.size)
+        if (useComma) {
+            config = CONFIG_DEFAULT.copy(useCRLF = testCRLF)
+            testCsv = csvTest1Comma.withDesiredLineEnding()
+        } else {
+            config = CONFIG_SEMICOLON.copy(useCRLF = testCRLF)
+            testCsv = csvTest1.withDesiredLineEnding()
+        }
 
-        Assertions.assertEquals("mrBranche", result[0][0])
-        //Assertions.assertEquals("1", result[0][0].name)
-        Assertions.assertEquals("mrBeschrTechn", result[0][1])
-        //Assertions.assertEquals("2", result[0][1].name)
-        Assertions.assertEquals("mrStartJahr", result[0][2])
-        //Assertions.assertEquals("3", result[0][2].name)
+        val parser = CsvParser(config)
 
-        Assertions.assertEquals("Automotive", result[1][0])
-        Assertions.assertEquals("Kanban, Jira, Confluence", result[1][1])
-        Assertions.assertEquals("2017", result[1][2])
+        val result = parser.parse(testCsv)
 
-        Assertions.assertEquals("Telekommunikation", result[9][0])
-        Assertions.assertEquals(
+        assertEquals(11, result.size)
+
+        assertEquals("mrBranche", result[0][0])
+        assertEquals("mrBeschrTechn", result[0][1])
+        assertEquals("mrStartJahr", result[0][2])
+
+        assertEquals("Automotive", result[1][0])
+        assertEquals("Kanban, Jira, Confluence", result[1][1])
+        assertEquals("2017", result[1][2])
+
+        assertEquals("Telekommunikation", result[9][0])
+        assertEquals(
             """
             Scrum
             intelliJ
             Protractor
             GIT
             Jira
-            Large/ small screen devices""".trimIndent(),
+            Large/ small screen devices""".trimIndent().withDesiredLineEnding(),
             result[9][1]
         )
-        Assertions.assertEquals("2015", result[9][2])
+        assertEquals("2015", result[9][2])
 
-        Assertions.assertEquals("Telekommunikation", result[10][0])
-        //Assertions.assertEquals("1", result[10][0].name)
-        Assertions.assertEquals(
+        assertEquals("Telekommunikation", result[10][0])
+        assertEquals(
             """
             Scrum
             intelliJ
             Protractor
             GIT
             Jira
-            Large/ small screen devices""".trimIndent(),
+            Large/ small screen devices""".trimIndent().withDesiredLineEnding(),
             result[10][1]
         )
-        //Assertions.assertEquals("2", result[10][1].name)
-        Assertions.assertEquals("2015            ", result[10][2])
-        //Assertions.assertEquals("3", result[10][2].name)
+        assertEquals("2015            ", result[10][2])
     }
 
     @Test
     fun testParseCSVSemicolon() {
-        testParseCSVHelper(useComma=false)
+        testParseCSVHelper(useComma = false, testCRLF = false)
     }
 
     @Test
     fun testParseCSVComma() {
-        testParseCSVHelper(useComma=true)
+        testParseCSVHelper(useComma = true, testCRLF = false)
+    }
+
+    @Test
+    fun testParseCSVWithCRLF() {
+        testParseCSVHelper(useComma = true, testCRLF = true)
+        testParseCSVHelper(useComma = false, testCRLF = true)
+    }
+
+    @Test
+    fun testParseMisconfiguredCRLF() {
+        val parser = CsvParser(CONFIG_DEFAULT)
+
+        val result = parser.parse(csvTest1Comma.replace("\n", "\r\n"))
+        for (row in result) {
+            val lastField = row[row.size - 1]
+            assertEquals("\r", lastField.substring(lastField.length - 1))
+        }
+    }
+
+    @Test
+    fun testParseMisconfiguredCRLF2() {
+        val parser = CsvParser(CONFIG_WINDOWS)
+        parser.parse(csvTest1Comma)
+    }
+
+    @Test
+    fun testSingleColumnCsv() {
+        val parser = CsvParser(CONFIG_DEFAULT)
+        val result = parser.parse(csvTest9)
+        assertEquals(7, result.size)
+        for (row in result) {
+            assertEquals(1, row.size)
+            assertEquals(1, row[0].length)
+        }
+
     }
 
 
     @Test
     fun testParseEndOfCSV() {
-        val parser = CsvParser(FieldSeparator.SEMICOLON)
+        val parser = CsvParser(CONFIG_SEMICOLON)
 
         val result = parser.parse(csvTest2)
 
-        Assertions.assertEquals(1, result.size)
+        assertEquals(1, result.size)
 
-        Assertions.assertEquals("Telekommunikation", result[0][0])
-        Assertions.assertEquals(
+        assertEquals("Telekommunikation", result[0][0])
+        assertEquals(
             """
             Scrum
             intelliJ
@@ -83,20 +128,20 @@ internal class CsvParserTest {
             Jira
             Large/ small screen devices""".trimIndent(), result[0][1]
         )
-        Assertions.assertEquals("2015            ", result[0][2])
+        assertEquals("2015            ", result[0][2])
     }
 
 
     @Test
     fun testParseEndOfCSVWithLF() {
-        val parser = CsvParser(FieldSeparator.SEMICOLON)
+        val parser = CsvParser(CONFIG_SEMICOLON)
 
         val result = parser.parse(csvTest3)
 
-        Assertions.assertEquals(1, result.size)
+        assertEquals(1, result.size)
 
-        Assertions.assertEquals("Telekommunikation", result[0][0])
-        Assertions.assertEquals(
+        assertEquals("Telekommunikation", result[0][0])
+        assertEquals(
             """
             Scrum
             intelliJ
@@ -105,59 +150,47 @@ internal class CsvParserTest {
             Jira
             Large/ small screen devices""".trimIndent(), result[0][1]
         )
-        Assertions.assertEquals("2015            ", result[0][2])
+        assertEquals("2015            ", result[0][2])
     }
 
 
     @Test
     fun testErrorOnUnbalancedQuotes() {
-        val parser = CsvParser(FieldSeparator.SEMICOLON)
+        val parser = CsvParser(CONFIG_SEMICOLON)
 
-        try {
+        assertFails("Should have aborted with exception") {
             parser.parse(csvTest4)
-            Assertions.fail("Should have aborted with exception")
-        }
-        catch (e: CsvParserException) {
-            // pass
         }
     }
 
 
     @Test
     fun testErrorOnIncompleteEscape() {
-        val parser = CsvParser(FieldSeparator.SEMICOLON)
+        val parser = CsvParser(CONFIG_SEMICOLON)
 
-        try {
+        assertFails("Should fail with exception") {
             parser.parse(csvTest5)
-            Assertions.fail("Should have aborted with exception")
-        }
-        catch (e: CsvParserException) {
-            // pass
         }
     }
 
     @Test
     fun testErrorOnMissingFieldSeparator() {
-        val parser = CsvParser(FieldSeparator.SEMICOLON)
+        val parser = CsvParser(CONFIG_SEMICOLON)
 
-        try {
+        assertFails("Should fail with exception") {
             parser.parse(csvTest6)
-            Assertions.fail("Should have aborted with exception")
-        }
-        catch (e: CsvParserException) {
-            //pass
         }
     }
 
 
     @Test
     fun testProperlyDetectsEscapedTerminationCharacterInQuotedStrings() {
-        val parser = CsvParser(FieldSeparator.SEMICOLON)
+        val parser = CsvParser(CONFIG_SEMICOLON)
 
         val result = parser.parse(csvTest7)
 
-        Assertions.assertEquals("Telekommunikation", result[0][0])
-        Assertions.assertEquals(
+        assertEquals("Telekommunikation", result[0][0])
+        assertEquals(
             """
             Scrum
             intelliJ
@@ -167,18 +200,18 @@ internal class CsvParserTest {
             Large/ small screen devices""".trimIndent(),
             result[0][1]
         )
-        Assertions.assertEquals("2015", result[0][2])
+        assertEquals("2015", result[0][2])
     }
 
 
     @Test
     fun testProperlyDetectsEscapedTerminationCharacterInUnquotedStrings() {
-        val parser = CsvParser(FieldSeparator.SEMICOLON)
+        val parser = CsvParser(CONFIG_SEMICOLON)
 
         val result = parser.parse(csvTest8)
 
-        Assertions.assertEquals("Telekommunikation", result[0][0])
-        Assertions.assertEquals(
+        assertEquals("Telekommunikation", result[0][0])
+        assertEquals(
             """
             Scrum
             intelliJ
@@ -188,6 +221,16 @@ internal class CsvParserTest {
             Large/ small screen devices;""".trimIndent(),
             result[0][1]
         )
-        Assertions.assertEquals("2015", result[0][2])
+        assertEquals("2015", result[0][2])
+    }
+
+    @Test
+    fun testCRLFQuoted() {
+        val parser = CsvParser(CONFIG_WINDOWS)
+
+        val result = parser.parse(csvTest10)
+
+        assertEquals("1", result[0][0])
+        assertEquals("2\r\n3", result[1][0])
     }
 }

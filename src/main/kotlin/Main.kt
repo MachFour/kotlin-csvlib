@@ -1,5 +1,5 @@
+import de.beanfactory.csvparser.CONFIG_DEFAULT
 import de.beanfactory.csvparser.CsvParser
-import de.beanfactory.csvparser.FieldSeparator
 import kotlin.io.path.Path
 import kotlin.io.path.readBytes
 
@@ -12,10 +12,11 @@ fun main(args: Array<String>) {
     readBytes[2] = 0x20
     val csvFile = String(readBytes, Charsets.UTF_8)
 
+    val csvConfig = CONFIG_DEFAULT
     val csvClean = csvFile.split("\r").joinToString(separator = "")
-    val csvRows = CsvParser(FieldSeparator.COMMA).parse(csvClean)
+    val csvRows = CsvParser(csvConfig).parse(csvClean)
 
     csvRows.forEach {
-        it[1].split(",").forEach(::println)
+        it[1].split(csvConfig.fieldSeparator).forEach(::println)
     }
 }

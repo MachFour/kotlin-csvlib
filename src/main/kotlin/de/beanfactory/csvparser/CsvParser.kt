@@ -40,14 +40,13 @@ import de.beanfactory.csvparser.CsvParser.ParserState.*
  * </pre>
  */
 
-private const val NEWLINE_CHAR = '\n'
-private const val QUOTE_CHAR = '"'
 private const val ESCAPE_CHAR = '\\'
+private const val NEWLINE_CHAR = '\n'
+private const val CR_CHAR = '\r'
 
-typealias CsvRow = ArrayList<String>
 
 class CsvParser(
-    private val separator: FieldSeparator
+    private val config: CsvConfig
 ) {
 
     /**
@@ -67,7 +66,23 @@ class CsvParser(
 
                 START_OF_ROW -> {
                     when (csvString[pos]) {
-                        NEWLINE_CHAR -> pos++ // skip empty lines
+                        NEWLINE_CHAR -> {
+                            if (!config.useCRLF) {
+                                // skip empty line
+                                pos++
+                            } else {
+                                // ignore bare LF
+                                state = READ_FIELD_VALUE
+                            }
+                        }
+                        CR_CHAR -> {
+                            if (config.useCRLF && pos + 1 < csvString.length && csvString[pos+1] == NEWLINE_CHAR) {
+                                // skip empty line
+                                pos += 2
+                            } else {
+                                state = READ_FIELD_VALUE
+                            }
+                        }
                         else -> state = READ_FIELD_VALUE
                     }
                 }
@@ -83,19 +98,32 @@ class CsvParser(
                     state = START_OF_ROW
                 }
                 NEXT_FIELD -> {
-                    state = when (csvString[pos]) {
-                        separator.char -> READ_FIELD_VALUE // start new field value
-                        NEWLINE_CHAR -> END_OF_ROW
+                    state = when (csvString[pos++]) {
+                        config.fieldSeparator -> READ_FIELD_VALUE // start new field value
+                        NEWLINE_CHAR -> {
+                            if (!config.useCRLF) {
+                                END_OF_ROW
+                            } else {
+                                ERROR_EXPECTED_FIELD_SEPARATOR
+                            }
+                        }
+                        CR_CHAR -> {
+                            if (config.useCRLF && pos < csvString.length && csvString[pos] == NEWLINE_CHAR) {
+                                pos++
+                                END_OF_ROW
+                            } else {
+                                ERROR_EXPECTED_FIELD_SEPARATOR
+                            }
+                        }
                         else -> ERROR_EXPECTED_FIELD_SEPARATOR
                     }
-                    pos++
                 }
                 ERROR_EXPECTED_FIELD_SEPARATOR -> {
-                    throw CsvParserException("Unexpected end of field, expected field separator.\n" +
+                    throw CsvParseException("Unexpected end of field, expected field separator.\n" +
                         ">>> ${csvString.substring(0, minOf(pos, csvString.length))} <<< here"
                     )
                 }
-                else -> throw CsvParserException(
+                else -> throw CsvParseException(
                     "Unknown state $state @ ${pos}, consumed so far: ${csvString.substring(0, pos)}"
                 )
             }
@@ -117,7 +145,7 @@ class CsvParser(
             when (state) {
                 START -> {
                     state = when (inputData[pos]) {
-                        QUOTE_CHAR -> READ_QUOTED_CHARS
+                        config.quoteCharacter -> READ_QUOTED_CHARS
                         else -> READ_UNQUOTED_CHARS
                     }
                     if (state == READ_QUOTED_CHARS) {
@@ -125,7 +153,7 @@ class CsvParser(
                     }
                 }
                 READ_UNQUOTED_CHARS -> {
-                    val result = readFieldChar(inputData, pos, "${separator.char}$NEWLINE_CHAR", false)
+                    val result = readFieldChar(inputData, pos, config.fieldSeparator, endOnNewLine = true, readBehindEndMarker = false)
                     state = result.newState ?: state
                     pos = result.newPos
                     value += result.value
@@ -135,7 +163,7 @@ class CsvParser(
                     }
                 }
                 READ_QUOTED_CHARS -> {
-                    val result = readFieldChar(inputData, pos, "$QUOTE_CHAR", true)
+                    val result = readFieldChar(inputData, pos, config.quoteCharacter, endOnNewLine = false, readBehindEndMarker = true)
                     state = result.newState ?: state
                     pos = result.newPos
                     value += result.value
@@ -146,16 +174,16 @@ class CsvParser(
                 }
                 END_OF_FIELD -> return ParseResult(value, null, pos)
                 ERROR_INCOMPLETE_ESCAPE -> {
-                    throw CsvParserException("Unexpected end of data during escape character processing\n" +
+                    throw CsvParseException("Unexpected end of data during escape character processing\n" +
                         ">>> ${inputData.substring(0, minOf(pos + 1, inputData.length))} <<< here"
                     )
                 }
-                else -> throw CsvParserException("unknown state $state")
+                else -> throw CsvParseException("unknown state $state")
             }
         }
 
         if (state != END_OF_FIELD) {
-            throw CsvParserException(
+            throw CsvParseException(
                 "Unexpected end of data in state $state\n" +
                     ">>> ${inputData.substring(0, minOf(pos + 1, inputData.length))} <<< here"
             )
@@ -169,20 +197,26 @@ class CsvParser(
     private fun readFieldChar(
         inputData: String,
         startPos: Int,
-        terminator: String,
-        readBehindTerminator: Boolean
+        endMarker: Char,
+        endOnNewLine: Boolean,
+        readBehindEndMarker: Boolean
     ): ParseResult<String> {
         val result = readNextChar(inputData, startPos)
 
-        return if (terminator.contains(result.value) && result.newState != ESCAPED_CHARACTER) {
+        return if (
+            (result.value == endMarker && result.newState != ESCAPED_CHARACTER) ||
+            (endOnNewLine && inputData.startsWith(config.lineTerminator, startPos))
+        ) {
             ParseResult(
                 value = "",
                 newState = END_OF_FIELD,
-                newPos = if (readBehindTerminator) result.newPos else result.newPos - 1
+                newPos = if (readBehindEndMarker) result.newPos else result.newPos - 1
             )
         } else {
             ParseResult(
                 value = result.value.toString(),
+                // If there was an error while parsing the next char, we want to update the parent state with it,
+                // otherwise return null to preserve the previous state
                 newState = result.newState?.takeIf { it.isError },
                 newPos = result.newPos
             )
@@ -216,11 +250,11 @@ class CsvParser(
                     )
                 }
             }
-            QUOTE_CHAR -> {
-                if (!isLastChar && inputData[pos + 1] == QUOTE_CHAR) {
+            config.quoteCharacter -> {
+                if (!isLastChar && inputData[pos + 1] == config.quoteCharacter) {
                     // this is a double quote, reduce to one quote with escape
                     ParseResult(
-                        value = QUOTE_CHAR,
+                        value = config.quoteCharacter,
                         newState = ESCAPED_CHARACTER,
                         newPos = pos + 2
                     )
