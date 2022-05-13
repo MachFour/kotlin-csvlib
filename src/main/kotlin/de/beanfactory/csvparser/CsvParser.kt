@@ -59,11 +59,12 @@ class CsvParser(
         var currentRow = CsvRow()
 
         var pos = 0
-        var state: ParserState = START
+        var state = START
 
         while (pos < csvString.length) {
             when (state) {
                 START -> state = START_OF_ROW
+
                 START_OF_ROW -> {
                     when (csvString[pos]) {
                         NEWLINE_CHAR -> pos++ // skip empty lines
@@ -72,30 +73,26 @@ class CsvParser(
                 }
                 READ_FIELD_VALUE -> {
                     val result = readFieldValue(csvString, pos)
-
                     pos = result.newPos
                     currentRow.add(result.value)
                     state = NEXT_FIELD
                 }
-                END_OF_ROW -> { // end of Row reached, process and start
-                    pos++
+                END_OF_ROW -> { // end of Row reached, process and start new row
                     rows += currentRow
                     currentRow = CsvRow()
                     state = START_OF_ROW
                 }
                 NEXT_FIELD -> {
                     state = when (csvString[pos]) {
-                        separator.char -> {
-                            pos++
-                            READ_FIELD_VALUE // start new field value
-                        }
+                        separator.char -> READ_FIELD_VALUE // start new field value
                         NEWLINE_CHAR -> END_OF_ROW
                         else -> ERROR_EXPECTED_FIELD_SEPARATOR
                     }
+                    pos++
                 }
                 ERROR_EXPECTED_FIELD_SEPARATOR -> {
-                    throw CsvParserException("Unexpected end of row, expected field separator.\n" +
-                        ">>> ${csvString.substring(0, minOf(pos + 1, csvString.length))} <<< here"
+                    throw CsvParserException("Unexpected end of field, expected field separator.\n" +
+                        ">>> ${csvString.substring(0, minOf(pos, csvString.length))} <<< here"
                     )
                 }
                 else -> throw CsvParserException(
@@ -103,7 +100,6 @@ class CsvParser(
                 )
             }
         }
-        csvString.chars()
 
         if (currentRow.isNotEmpty()) {
             rows += currentRow
@@ -115,17 +111,17 @@ class CsvParser(
     private fun readFieldValue(inputData: String, startPos: Int): ParseResult<String> {
         var pos = startPos
         var value = ""
-        var state: ParserState = START
+        var state = START
 
         while (pos < inputData.length) {
             when (state) {
                 START -> {
                     state = when (inputData[pos]) {
-                        QUOTE_CHAR -> {
-                            pos++
-                            READ_QUOTED_CHARS
-                        }
+                        QUOTE_CHAR -> READ_QUOTED_CHARS
                         else -> READ_UNQUOTED_CHARS
+                    }
+                    if (state == READ_QUOTED_CHARS) {
+                        pos++
                     }
                 }
                 READ_UNQUOTED_CHARS -> {
@@ -178,21 +174,19 @@ class CsvParser(
     ): ParseResult<String> {
         val result = readNextChar(inputData, startPos)
 
-        val resultPos: Int
-        val resultValue: String
-        val resultState: ParserState?
-
-        if (terminator.contains(result.value) && result.newState != ESCAPED_CHARACTER) {
-            resultPos = if (readBehindTerminator) result.newPos else result.newPos - 1
-            resultValue = ""
-            resultState = END_OF_FIELD
+        return if (terminator.contains(result.value) && result.newState != ESCAPED_CHARACTER) {
+            ParseResult(
+                value = "",
+                newState = END_OF_FIELD,
+                newPos = if (readBehindTerminator) result.newPos else result.newPos - 1
+            )
         } else {
-            resultPos = result.newPos
-            resultValue = result.value.toString()
-            resultState = result.newState?.takeIf { it.isError }
+            ParseResult(
+                value = result.value.toString(),
+                newState = result.newState?.takeIf { it.isError },
+                newPos = result.newPos
+            )
         }
-
-        return ParseResult(resultValue, resultState, resultPos)
     }
 
     private fun readNextChar(inputData: String, pos: Int): ParseResult<Char> {
