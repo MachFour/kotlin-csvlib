@@ -1,3 +1,3 @@
 
-rootProject.name = "kotlin-csvparser"
+rootProject.name = "kotlin-csvlib"
 

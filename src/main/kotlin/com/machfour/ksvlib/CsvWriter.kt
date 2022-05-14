@@ -1,4 +1,4 @@
-package de.beanfactory.csvparser
+package com.machfour.ksvlib
 
 // CSV rules, adapted from https://super-csv.github.io/super-csv/csv_specification.html
 // 1. Each record is located on a separate line, delimited by a line break

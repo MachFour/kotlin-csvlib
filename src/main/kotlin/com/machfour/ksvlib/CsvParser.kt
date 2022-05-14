@@ -1,6 +1,6 @@
-package de.beanfactory.csvparser
+package com.machfour.ksvlib
 
-import de.beanfactory.csvparser.CsvParser.ParserState.*
+import com.machfour.ksvlib.CsvParser.ParserState.*
 
 /**
  * CsvParser implementation.
@@ -17,7 +17,7 @@ import de.beanfactory.csvparser.CsvParser.ParserState.*
  * <pre>
  * MIT License
  *
- * Copyright (c) 2021 Thomas Strauß
+ * Copyright (c) 2021-2022 Thomas Strauß, Max Fisher
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

@@ -1,4 +1,4 @@
-package de.beanfactory.csvparser
+package com.machfour.ksvlib
 
 internal val csvTest1: String = """
 mrBranche;mrBeschrTechn;mrStartJahr

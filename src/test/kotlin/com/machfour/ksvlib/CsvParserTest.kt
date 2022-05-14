@@ -1,4 +1,4 @@
-package de.beanfactory.csvparser
+package com.machfour.ksvlib
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

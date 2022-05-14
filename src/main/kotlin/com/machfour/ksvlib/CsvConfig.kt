@@ -1,4 +1,4 @@
-package de.beanfactory.csvparser
+package com.machfour.ksvlib
 
 interface CsvConfig {
     val fieldSeparator: Char

@@ -14,7 +14,6 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib:1.6.20"))
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.20") // for Path.readBytes()
     testImplementation(kotlin("test"))
 }
 

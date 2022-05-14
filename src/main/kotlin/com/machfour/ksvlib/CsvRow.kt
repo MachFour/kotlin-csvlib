@@ -1,3 +1,3 @@
-package de.beanfactory.csvparser
+package com.machfour.ksvlib
 
 typealias CsvRow = ArrayList<String>
