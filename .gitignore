@@ -1,2 +1,4 @@
 /.gradle/
 /build/
+/.idea/.name
+/.idea/uiDesigner.xml

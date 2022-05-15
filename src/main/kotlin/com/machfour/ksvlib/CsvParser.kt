@@ -45,9 +45,7 @@ private const val NEWLINE_CHAR = '\n'
 private const val CR_CHAR = '\r'
 
 
-class CsvParser(
-    private val config: CsvConfig
-) {
+class CsvParser(val config: CsvConfig) {
 
     /**
      * parse the given string as csv.
@@ -55,7 +53,7 @@ class CsvParser(
      */
     fun parse(csvString: String): List<CsvRow> {
         val rows = ArrayList<CsvRow>()
-        var currentRow = CsvRow()
+        var currentRow = ArrayList<String>()
 
         var pos = 0
         var state = START
@@ -94,7 +92,7 @@ class CsvParser(
                 }
                 END_OF_ROW -> { // end of Row reached, process and start new row
                     rows += currentRow
-                    currentRow = CsvRow()
+                    currentRow = ArrayList()
                     state = START_OF_ROW
                 }
                 NEXT_FIELD -> {

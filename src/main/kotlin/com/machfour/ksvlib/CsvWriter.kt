@@ -21,20 +21,22 @@ package com.machfour.ksvlib
 // 7. If double-quotes are used to enclose fields, then a double-quote appearing inside a field must be escaped
 //    by preceding it with another double quote. Escaping with a backslash is supported when reading but not writing.
 
-class CsvWriter(
-    private val config: CsvConfig
-) {
-
-    private fun String.quoteCsv(): String {
-        // TODO
-        return this
+class CsvWriter(val config: CsvConfig) {
+    fun write(rows: Collection<CsvRow>): String {
+        return rows.joinToString(separator = config.lineTerminator, postfix = config.lineTerminator) { row ->
+            row.joinToString(separator = config.fieldSeparator.toString()) { it.quoteField() }
+        }
     }
 
-    private fun CsvRow.toCsvString(): String {
-        return joinToString(separator = config.fieldSeparator.toString()) { it.quoteCsv() }
-    }
-
-    fun write(rows: List<CsvRow>): String {
-        return rows.joinToString(separator = config.lineTerminator) { it.toCsvString() }
+    private fun String.quoteField(): String {
+        return if (contains(config.lineTerminator) || contains(config.fieldSeparator) || contains(config.quoteCharacter)) {
+            val quoteString = config.quoteCharacter.toString()
+            val escapedQuoteString = quoteString + quoteString
+            // quote characters are escaped using another quote character
+            "\"${replace(quoteString, escapedQuoteString)}\""
+        } else {
+            // no quotes needed
+            this
+        }
     }
 }
