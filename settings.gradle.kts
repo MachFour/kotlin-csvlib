@@ -1,3 +1,4 @@
 
-rootProject.name = "kotlin-csvlib"
-
+rootProject.name = "kotlin-csv"
+include("demo")
+include("lib")

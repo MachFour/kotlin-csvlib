@@ -1,4 +1,4 @@
-package com.machfour.ksvlib
+package com.machfour.ksv
 
 internal val csvTest1: String = """
 mrBranche;mrBeschrTechn;mrStartJahr

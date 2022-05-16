@@ -1,4 +1,4 @@
-package com.machfour.ksvlib
+package com.machfour.ksv
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

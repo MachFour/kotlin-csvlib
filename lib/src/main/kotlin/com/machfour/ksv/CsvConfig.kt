@@ -1,4 +1,4 @@
-package com.machfour.ksvlib
+package com.machfour.ksv
 
 class CsvConfig(
     val fieldSeparator: Char = DEFAULT_SEPARATOR,

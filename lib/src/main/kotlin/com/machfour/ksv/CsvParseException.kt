@@ -1,3 +1,3 @@
-package com.machfour.ksvlib
+package com.machfour.ksv
 
 class CsvParseException(message: String): RuntimeException(message)

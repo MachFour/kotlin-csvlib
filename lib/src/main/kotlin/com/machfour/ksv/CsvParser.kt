@@ -1,6 +1,6 @@
-package com.machfour.ksvlib
+package com.machfour.ksv
 
-import com.machfour.ksvlib.CsvParser.ParserState.*
+import com.machfour.ksv.CsvParser.ParserState.*
 
 /**
  * CsvParser implementation.

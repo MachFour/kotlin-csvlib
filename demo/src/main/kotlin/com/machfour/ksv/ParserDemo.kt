@@ -1,6 +1,5 @@
-import com.machfour.ksvlib.CONFIG_DEFAULT
-import com.machfour.ksvlib.CsvParser
-
+import com.machfour.ksv.CONFIG_DEFAULT
+import com.machfour.ksv.CsvParser
 
 fun parserDemo(csv: String) {
     val parser = CsvParser(CONFIG_DEFAULT)
