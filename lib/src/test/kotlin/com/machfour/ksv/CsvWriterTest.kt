@@ -15,7 +15,7 @@ internal class CsvWriterTest {
     @Test
     fun testBasic() {
         val expected = "1,2,3,4,5\na,b,c,d,e\n!,@,#,$,%\n"
-        val writer = CsvWriter(CONFIG_DEFAULT)
+        val writer = CsvWriter(CsvConfig.DEFAULT)
 
         assertEquals(expected, writer.write(testCsvFields1))
     }
@@ -23,7 +23,7 @@ internal class CsvWriterTest {
     @Test
     fun testBasicCRLF() {
         val expected = "1,2,3,4,5\r\na,b,c,d,e\r\n!,@,#,$,%\r\n"
-        val writer = CsvWriter(CONFIG_WINDOWS)
+        val writer = CsvWriter(CsvConfig.WINDOWS)
 
         assertEquals(expected, writer.write(testCsvFields1))
     }
@@ -47,7 +47,7 @@ internal class CsvWriterTest {
             
             """.trimIndent()
 
-        val writer = CsvWriter(CONFIG_DEFAULT)
+        val writer = CsvWriter(CsvConfig.DEFAULT)
         assertEquals(expected, writer.write(csvFields))
     }
 
@@ -66,7 +66,7 @@ internal class CsvWriterTest {
             
             """.trimIndent()
 
-        val writer = CsvWriter(CONFIG_DEFAULT)
+        val writer = CsvWriter(CsvConfig.DEFAULT)
         assertEquals(expected, writer.write(csvFields))
     }
 
@@ -82,7 +82,7 @@ internal class CsvWriterTest {
         val q4 = "\"\"\"\""
         val expected = """"${q2}1${q2}","${q2}2","3${q2}"$lf"${q4}a${q4}","${q4}b","c${q4}"$lf"""
 
-        val writer = CsvWriter(CONFIG_DEFAULT)
+        val writer = CsvWriter(CsvConfig.DEFAULT)
         assertEquals(expected, writer.write(csvFields))
     }
 }

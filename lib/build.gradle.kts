@@ -23,3 +23,9 @@ tasks.test {
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = JavaVersion.VERSION_11.toString()
 }
+
+tasks.withType<Jar> {
+    archiveBaseName.set("kotlin-csvlib")
+    manifest.attributes["Manifest-Version"] = 1.0
+    duplicatesStrategy = DuplicatesStrategy.WARN
+}

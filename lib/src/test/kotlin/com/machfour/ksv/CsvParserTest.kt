@@ -16,10 +16,10 @@ internal class CsvParserTest {
         val testCsv: String
 
         if (useComma) {
-            config = CONFIG_DEFAULT.copy(useCRLF = testCRLF)
+            config = CsvConfig.DEFAULT.copy(useCRLF = testCRLF)
             testCsv = csvTest1Comma.withDesiredLineEnding()
         } else {
-            config = CONFIG_SEMICOLON.copy(useCRLF = testCRLF)
+            config = CsvConfig.SEMICOLON.copy(useCRLF = testCRLF)
             testCsv = csvTest1.withDesiredLineEnding()
         }
 
@@ -82,7 +82,7 @@ internal class CsvParserTest {
 
     @Test
     fun testParseMisconfiguredCRLF() {
-        val parser = CsvParser(CONFIG_DEFAULT)
+        val parser = CsvParser(CsvConfig.DEFAULT)
 
         val result = parser.parse(csvTest1Comma.replace("\n", "\r\n"))
         for (row in result) {
@@ -93,13 +93,13 @@ internal class CsvParserTest {
 
     @Test
     fun testParseMisconfiguredCRLF2() {
-        val parser = CsvParser(CONFIG_WINDOWS)
+        val parser = CsvParser(CsvConfig.WINDOWS)
         parser.parse(csvTest1Comma)
     }
 
     @Test
     fun testSingleColumnCsv() {
-        val parser = CsvParser(CONFIG_DEFAULT)
+        val parser = CsvParser(CsvConfig.DEFAULT)
         val result = parser.parse(csvTest9)
         assertEquals(7, result.size)
         for (row in result) {
@@ -112,7 +112,7 @@ internal class CsvParserTest {
 
     @Test
     fun testParseEndOfCSV() {
-        val parser = CsvParser(CONFIG_SEMICOLON)
+        val parser = CsvParser(CsvConfig.SEMICOLON)
 
         val result = parser.parse(csvTest2)
 
@@ -134,7 +134,7 @@ internal class CsvParserTest {
 
     @Test
     fun testParseEndOfCSVWithLF() {
-        val parser = CsvParser(CONFIG_SEMICOLON)
+        val parser = CsvParser(CsvConfig.SEMICOLON)
 
         val result = parser.parse(csvTest3)
 
@@ -156,7 +156,7 @@ internal class CsvParserTest {
 
     @Test
     fun testErrorOnUnbalancedQuotes() {
-        val parser = CsvParser(CONFIG_SEMICOLON)
+        val parser = CsvParser(CsvConfig.SEMICOLON)
 
         assertFails("Should have aborted with exception") {
             parser.parse(csvTest4)
@@ -166,7 +166,7 @@ internal class CsvParserTest {
 
     @Test
     fun testErrorOnIncompleteEscape() {
-        val parser = CsvParser(CONFIG_SEMICOLON)
+        val parser = CsvParser(CsvConfig.SEMICOLON)
 
         assertFails("Should fail with exception") {
             parser.parse(csvTest5)
@@ -175,7 +175,7 @@ internal class CsvParserTest {
 
     @Test
     fun testErrorOnMissingFieldSeparator() {
-        val parser = CsvParser(CONFIG_SEMICOLON)
+        val parser = CsvParser(CsvConfig.SEMICOLON)
 
         assertFails("Should fail with exception") {
             parser.parse(csvTest6)
@@ -185,7 +185,7 @@ internal class CsvParserTest {
 
     @Test
     fun testProperlyDetectsEscapedTerminationCharacterInQuotedStrings() {
-        val parser = CsvParser(CONFIG_SEMICOLON)
+        val parser = CsvParser(CsvConfig.SEMICOLON)
 
         val result = parser.parse(csvTest7)
 
@@ -206,7 +206,7 @@ internal class CsvParserTest {
 
     @Test
     fun testProperlyDetectsEscapedTerminationCharacterInUnquotedStrings() {
-        val parser = CsvParser(CONFIG_SEMICOLON)
+        val parser = CsvParser(CsvConfig.SEMICOLON)
 
         val result = parser.parse(csvTest8)
 
@@ -226,7 +226,7 @@ internal class CsvParserTest {
 
     @Test
     fun testCRLFQuoted() {
-        val parser = CsvParser(CONFIG_WINDOWS)
+        val parser = CsvParser(CsvConfig.WINDOWS)
 
         val result = parser.parse(csvTest10)
 

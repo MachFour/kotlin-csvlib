@@ -1,8 +1,8 @@
-import com.machfour.ksv.CONFIG_DEFAULT
+import com.machfour.ksv.CsvConfig
 import com.machfour.ksv.CsvParser
 
 fun parserDemo(csv: String) {
-    val parser = CsvParser(CONFIG_DEFAULT)
+    val parser = CsvParser(CsvConfig.DEFAULT)
     parser.parse(csv).forEach { row ->
         row.forEachIndexed { index, field -> print("[F$index] $field ") }
         println()
