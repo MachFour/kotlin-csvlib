@@ -41,11 +41,13 @@ import com.machfour.ksv.CsvParser.ParserState.*
  */
 
 private const val ESCAPE_CHAR = '\\'
-private const val NEWLINE_CHAR = '\n'
-private const val CR_CHAR = '\r'
 
 
 class CsvParser(val config: CsvConfig) {
+    // TODO add functions to
+    //  - add string data (i.e 1 row)
+    //  - test if can parse a row from current data
+    //  - parse one more row if possible OR parse one row and throw exception if not possible
 
     /**
      * parse the given string as csv.
@@ -63,25 +65,11 @@ class CsvParser(val config: CsvConfig) {
                 START -> state = START_OF_ROW
 
                 START_OF_ROW -> {
-                    when (csvString[pos]) {
-                        NEWLINE_CHAR -> {
-                            if (!config.useCRLF) {
-                                // skip empty line
-                                pos++
-                            } else {
-                                // ignore bare LF
-                                state = READ_FIELD_VALUE
-                            }
-                        }
-                        CR_CHAR -> {
-                            if (config.useCRLF && pos + 1 < csvString.length && csvString[pos+1] == NEWLINE_CHAR) {
-                                // skip empty line
-                                pos += 2
-                            } else {
-                                state = READ_FIELD_VALUE
-                            }
-                        }
-                        else -> state = READ_FIELD_VALUE
+                    if (csvString.startsWith(config.lineTerminator, pos)) {
+                        // skip empty line
+                        pos += config.lineTerminator.length
+                    } else {
+                        state = READ_FIELD_VALUE
                     }
                 }
                 READ_FIELD_VALUE -> {
@@ -96,22 +84,14 @@ class CsvParser(val config: CsvConfig) {
                     state = START_OF_ROW
                 }
                 NEXT_FIELD -> {
-                    state = when (csvString[pos++]) {
-                        config.fieldSeparator -> READ_FIELD_VALUE // start new field value
-                        NEWLINE_CHAR -> {
-                            if (!config.useCRLF) {
-                                END_OF_ROW
-                            } else {
-                                ERROR_EXPECTED_FIELD_SEPARATOR
-                            }
+                    state = when {
+                        csvString[pos] == config.fieldSeparator -> {
+                            pos++
+                            READ_FIELD_VALUE // start new field value
                         }
-                        CR_CHAR -> {
-                            if (config.useCRLF && pos < csvString.length && csvString[pos] == NEWLINE_CHAR) {
-                                pos++
-                                END_OF_ROW
-                            } else {
-                                ERROR_EXPECTED_FIELD_SEPARATOR
-                            }
+                        csvString.startsWith(config.lineTerminator, pos) -> {
+                            pos += config.lineTerminator.length
+                            END_OF_ROW
                         }
                         else -> ERROR_EXPECTED_FIELD_SEPARATOR
                     }
@@ -142,12 +122,11 @@ class CsvParser(val config: CsvConfig) {
         while (pos < inputData.length) {
             when (state) {
                 START -> {
-                    state = when (inputData[pos]) {
-                        config.quoteCharacter -> READ_QUOTED_CHARS
-                        else -> READ_UNQUOTED_CHARS
-                    }
-                    if (state == READ_QUOTED_CHARS) {
+                    state = if (inputData[pos] == config.quoteCharacter) {
                         pos++
+                        READ_QUOTED_CHARS
+                    } else {
+                        READ_UNQUOTED_CHARS
                     }
                 }
                 READ_UNQUOTED_CHARS -> {

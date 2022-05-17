@@ -23,9 +23,15 @@ package com.machfour.ksv
 
 class CsvWriter(val config: CsvConfig) {
     fun write(rows: Collection<CsvRow>): String {
-        return rows.joinToString(separator = config.lineTerminator, postfix = config.lineTerminator) { row ->
-            row.joinToString(separator = config.fieldSeparator.toString()) { it.quoteField() }
-        }
+        // rows already have line terminator added
+        return rows.joinToString(separator = "") { writeRow(it) }
+    }
+
+    // Writes a single CSV row to a string. This will typically be a single newline-terminated line, however
+    // may contain other newline characters if there are any multi-line fields (but these will be quoted).
+    fun writeRow(row: CsvRow): String {
+        val separator = config.fieldSeparator.toString()
+        return row.joinToString(separator, postfix = config.lineTerminator) { it.quoteField() }
     }
 
     private fun String.quoteField(): String {
